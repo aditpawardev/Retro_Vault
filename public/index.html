@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Retro Vault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070b;
+    --bg2: #0d0d14;
+    --bg3: #141420;
+    --bg4: #1c1c2b;
+    --border: rgba(255,255,255,0.05);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f1f1f5;
+    --text2: #9aa0b3;
+    --text3: #5c637a;
+    --accent: #8b5cf6;
+    --accent2: #6366f1;
+    --accent3: #22c55e;
+    --glow: rgba(139,92,246,0.35);
+    --red: #ef4444;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --cyan: #06b6d4;
+    --blue: #3b82f6;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--font); }
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(139,92,246,0.14), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(99,102,241,0.12), transparent 42%);
+    z-index:0;
+  }
+
+  /* ─── LIBRARY VIEW ─── */
+  #library-view {
+    width:100%; height:100vh; display:flex; flex-direction:column;
+    background:var(--bg);
+    position:relative;
+    z-index:1;
+  }
+
+  /* Scanline overlay */
+  #library-view::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+    background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  }
+
+  /* Header */
+  .header {
+    padding:20px 28px 16px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:16px; flex-shrink:0;
+    background:rgba(10,10,15,0.95);
+    backdrop-filter:blur(20px);
+    position:sticky; top:0; z-index:100;
+  }
+  .logo {
+    display:flex; align-items:center; gap:10px;
+    font-size:22px; font-weight:700; letter-spacing:-0.5px;
+  }
+  .logo-icon {
+    width:36px; height:36px; border-radius:10px;
+    background:linear-gradient(135deg, var(--accent) 0%, #c026d3 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+    box-shadow:0 0 20px var(--glow);
+  }
+  .logo span { background:linear-gradient(135deg,#e879f9,#818cf8); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .header-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .github-btn{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--bg3); color:var(--text2);
+    text-decoration:none; font-size:12px; transition:.2s;
+  }
+  .github-btn:hover{
+    color:#fff; border-color:var(--accent);
+    box-shadow:0 0 14px var(--glow);
+  }
+  .search-wrap {
+    position:relative; display:flex; align-items:center;
+  }
+  .search-wrap svg { position:absolute; left:12px; color:var(--text2); width:16px; height:16px; }
+  #search-input {
+    background:var(--bg3); border:1px solid var(--border2); border-radius:10px;
+    padding:9px 14px 9px 36px; color:var(--text); font-family:var(--font); font-size:14px;
+    width:220px; outline:none; transition:all .2s;
+  }
+  #search-input:focus { border-color:var(--accent2); background:var(--bg4); width:280px; }
+  #search-input::placeholder { color:var(--text2); }
+  .stats-badge {
+    background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+    padding:6px 12px; font-size:12px; color:var(--text2); font-family:var(--mono);
+  }
+  .stats-badge span { color:var(--accent2); font-weight:700; }
+
+  /* System filter tabs */
+  .system-tabs {
+    padding:14px 28px 0; display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto;
+    flex-shrink:0; scrollbar-width:none;
+  }
+  .system-tabs::-webkit-scrollbar { display:none; }
+  .sys-tab {
+    display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg3); cursor:pointer;
+    font-family:var(--font); font-size:13px; font-weight:500; color:var(--text2);
+    transition:all .15s; white-space:nowrap; flex-shrink:0;
+  }
+  .sys-tab:hover { border-color:var(--border2); color:var(--text); background:var(--bg4); }
+  .sys-tab.active { background:var(--accent); border-color:var(--accent2); color:#fff; box-shadow:0 0 12px var(--glow); }
+  .sys-tab .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .count-pill {
+    background:rgba(255,255,255,0.1); border-radius:5px; padding:1px 6px;
+    font-size:11px; font-family:var(--mono);
+  }
+
+  /* Games grid */
+  .games-container {
+    flex:1; overflow-y:auto; padding:20px 28px 28px;
+    scrollbar-width:thin; scrollbar-color:var(--bg4) transparent;
+  }
+  .games-container::-webkit-scrollbar { width:5px; }
+  .games-container::-webkit-scrollbar-thumb { background:var(--bg4); border-radius:4px; }
+
+  .section-label {
+    font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text2); margin-bottom:14px; margin-top:6px;
+  }
+
+  .games-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+    gap:14px;
+  }
+
+  .game-card {
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-lg);
+    cursor:pointer; transition:all .2s; overflow:hidden; position:relative;
+    aspect-ratio:3/4;
+    display:flex; flex-direction:column;
+  }
+  .game-card:hover {
+    border-color:var(--border2); transform:translateY(-3px);
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+  }
+  .game-card:active { transform:translateY(-1px); }
+
+  .card-art {
+    flex:1; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card-art-bg {
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at 50% 80%, var(--sys-color, #7c3aed)22, transparent 70%);
+  }
+  .card-art-icon {
+    font-size:56px; opacity:0.08; position:absolute;
+    font-family:var(--mono); font-weight:700; letter-spacing:-4px;
+  }
+  .card-art-label {
+    font-family:var(--mono); font-size:11px; font-weight:700;
+    padding:5px 10px; border-radius:6px;
+    background:var(--sys-color, #7c3aed); color:#fff; opacity:0.9;
+    position:absolute; top:10px; left:10px; letter-spacing:1px;
+  }
+  .card-art-cover {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center;
+    opacity:0.95;
+  }
+  .card-art-placeholder {
+    font-size:40px; opacity:0.4; user-select:none;
+  }
+  .card-info {
+    padding:12px 14px; border-top:1px solid var(--border); background:var(--bg2);
+  }
+  .card-name {
+    font-size:13px; font-weight:600; line-height:1.3; color:var(--text);
+    display:-webkit-box; line-clamp:2; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .card-sys { font-size:11px; color:var(--text2); margin-top:3px; }
+
+  /* Play button overlay */
+  .play-overlay {
+    position:absolute; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .2s; border-radius:0;
+  }
+  .game-card:hover .play-overlay { opacity:1; }
+  .play-btn-big {
+    width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg, var(--accent), var(--accent2));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 30px var(--glow);
+    transform:scale(0.8); transition:transform .2s;
+  }
+  .game-card:hover .play-btn-big { transform:scale(1); }
+  .play-btn-big svg { margin-left:3px; }
+
+  /* Empty state */
+  .empty-state {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:80px 20px; gap:16px; color:var(--text2); text-align:center;
+  }
+  .empty-icon { font-size:56px; opacity:0.3; }
+  .empty-title { font-size:18px; font-weight:600; color:var(--text); }
+  .empty-desc { font-size:14px; line-height:1.6; max-width:360px; }
+  .empty-path { font-family:var(--mono); font-size:12px; color:var(--accent2); margin-top:4px; }
+
+  /* ─── GAME VIEW ─── */
+  #game-view {
+    display:none; flex-direction:column; width:100%; height:100vh;
+    background:#000;
+  }
+  #game-view.active { display:flex; }
+
+  .game-topbar {
+    display:flex; align-items:center; gap:12px; padding:10px 16px;
+    background:rgba(10,10,15,0.98); border-bottom:1px solid var(--border);
+    flex-shrink:0; z-index:50;
+  }
+  .back-btn {
+    display:flex; align-items:center; gap:7px; padding:7px 14px;
+    background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+    cursor:pointer; font-family:var(--font); font-size:13px; font-weight:500;
+    color:var(--text2); transition:all .15s;
+  }
+  .back-btn:hover { color:var(--text); border-color:var(--border2); background:var(--bg4); }
+  .game-title-bar { font-size:15px; font-weight:600; flex:1; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; }
+  .game-sys-badge {
+    padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700;
+    font-family:var(--mono); letter-spacing:0.5px;
+  }
+  .topbar-actions { display:flex; gap:8px; }
+  .topbar-btn {
+    padding:7px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg3); cursor:pointer; font-family:var(--font); font-size:12px;
+    color:var(--text2); transition:all .15s; display:flex; align-items:center; gap:5px;
+  }
+  .topbar-btn:hover { color:var(--text); border-color:var(--border2); background:var(--bg4); }
+  .topbar-btn.danger:hover { color:var(--red); border-color:var(--red); }
+  .fullscreen-btn { display:none; }
+  @media (max-width:768px) { .fullscreen-btn { display:flex; } }
+
+  /* Emulator container */
+  .emu-wrapper {
+    flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden;
+    background:#000;
+  }
+  #game-container {
+    flex:1; width:100%; position:relative; display:flex; align-items:center; justify-content:center;
+    background:#000;
+  }
+  #game-container canvas { max-width:100%; max-height:100%; image-rendering:pixelated; }
+
+  /* ─── VIRTUAL CONTROLS ─── */
+  /* Only shown on touch devices */
+  #virtual-controls {
+    display:none;
+    flex-shrink:0; padding:8px 12px 12px;
+    background:#000;
+    user-select:none; -webkit-user-select:none;
+  }
+  #virtual-controls.touch-visible { display:block; }
+
+  .vpad-layout {
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:8px; align-items:center; max-width:500px; margin:0 auto;
+  }
+
+  /* D-Pad */
+  .dpad { position:relative; width:110px; height:110px; flex-shrink:0; }
+  .dpad-btn {
+    position:absolute; width:36px; height:36px; background:var(--bg3);
+    border:1px solid var(--border2); border-radius:7px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .1s; color:var(--text2);
+    -webkit-tap-highlight-color:transparent;
+    touch-action:none;
+  }
+  .dpad-btn:active, .dpad-btn.pressed { background:var(--bg4); border-color:var(--accent); }
+  .dpad-up    { top:0;    left:50%; transform:translateX(-50%); }
+  .dpad-down  { bottom:0; left:50%; transform:translateX(-50%); }
+  .dpad-left  { left:0;   top:50%; transform:translateY(-50%); }
+  .dpad-right { right:0;  top:50%; transform:translateY(-50%); }
+  .dpad-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:36px; height:36px; background:var(--bg4); border-radius:50%; }
+
+  /* Action buttons (right side) */
+  .abxy-pad { position:relative; width:110px; height:110px; flex-shrink:0; }
+  .action-btn {
+    position:absolute; width:38px; height:38px; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; font-family:var(--mono);
+    border:2px solid; transition:all .1s; -webkit-tap-highlight-color:transparent;
+    touch-action:none;
+  }
+  .action-btn.btn-a { bottom:0; right:8px; color:#ef4444; border-color:#ef444466; background:#ef444411; }
+  .action-btn.btn-b { bottom:24px; left:0; color:#f59e0b; border-color:#f59e0b66; background:#f59e0b11; }
+  .action-btn.btn-x { top:0; right:8px; color:#3b82f6; border-color:#3b82f666; background:#3b82f611; }
+  .action-btn.btn-y { top:24px; left:0; color:#10b981; border-color:#10b98166; background:#10b98111; }
+  .action-btn:active, .action-btn.pressed {
+    transform:scale(0.88);
+    background:color-mix(in srgb, currentColor 25%, transparent);
+  }
+
+  /* Center buttons (start/select) */
+  .center-btns {
+    display:flex; flex-direction:column; gap:8px; align-items:center;
+  }
+  .meta-btn {
+    padding:6px 14px; background:var(--bg3); border:1px solid var(--border2);
+    border-radius:20px; cursor:pointer; font-family:var(--mono); font-size:10px;
+    color:var(--text2); letter-spacing:0.5px; -webkit-tap-highlight-color:transparent;
+    touch-action:none; transition:all .1s;
+  }
+  .meta-btn:active, .meta-btn.pressed { background:var(--bg4); color:var(--text); border-color:var(--accent); }
+
+  /* Shoulder buttons (above the layout) */
+  .shoulder-row {
+    display:flex; justify-content:space-between; padding:0 0 6px;
+    max-width:500px; margin:0 auto;
+  }
+  .shoulder-btn {
+    padding:6px 20px; background:var(--bg3); border:1px solid var(--border2);
+    border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11px;
+    color:var(--text2); -webkit-tap-highlight-color:transparent;
+    touch-action:none; transition:all .1s;
+  }
+  .shoulder-btn:active, .shoulder-btn.pressed { background:var(--bg4); color:var(--text); border-color:var(--accent); }
+
+  /* NDS specific: touch screen drag area label */
+  .nds-touch-hint {
+    text-align:center; font-size:10px; color:var(--text2); padding:4px;
+    font-family:var(--mono); letter-spacing:0.5px;
+  }
+
+  /* Loading screen */
+  #loading-screen {
+    display:none; position:absolute; inset:0; background:#000;
+    align-items:center; justify-content:center; flex-direction:column; gap:20px;
+    z-index:200;
+  }
+  #loading-screen.visible { display:flex; }
+  .loading-spinner {
+    width:48px; height:48px; border:3px solid var(--bg3);
+    border-top-color:var(--accent2); border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-title { font-size:18px; font-weight:600; }
+  .loading-sub { font-size:13px; color:var(--text2); font-family:var(--mono); }
+
+  /* Mobile adjustments */
+  @media (max-width:600px) {
+    .header { padding:14px 16px 12px; }
+    .system-tabs { padding:10px 16px 0; gap:6px; }
+    .games-container { padding:14px 16px 80px; }
+    .games-grid { grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+    .logo { font-size:18px; }
+    .github-btn { display:none; }
+    #search-input { width:140px; font-size:13px; }
+    #search-input:focus { width:180px; }
+    .stats-badge { display:none; }
+  }
+  @media (max-width:400px) {
+    .games-grid { grid-template-columns:repeat(2, 1fr); }
+  }
+
+  /* Fullscreen mode adjustments */
+  :fullscreen #game-view, :-webkit-full-screen #game-view {
+    display:flex;
+  }
+  :fullscreen .game-topbar, :-webkit-full-screen .game-topbar {
+    display:none;
+  }
+
+  /* Controller connected badge */
+  .controller-badge {
+    display:none; align-items:center; gap:5px; padding:4px 10px;
+    background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3);
+    border-radius:6px; font-size:11px; color:#10b981; font-family:var(--mono);
+  }
+  .controller-badge.visible { display:flex; }
+  .controller-dot { width:6px; height:6px; border-radius:50%; background:#10b981; animation:pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<!-- ═══ LIBRARY VIEW ═══ -->
+<div id="library-view">
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🕹</div>
+      <span>Retro Vault</span>
+    </div>
+    <div class="header-right">
+      <a class="github-btn" href="https://github.com/aditpawardev" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
+      <div class="controller-badge" id="controller-badge">
+        <div class="controller-dot"></div>
+        <span>Controller</span>
+      </div>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="search-input" type="text" placeholder="Search games..." autocomplete="off">
+      </div>
+      <div class="stats-badge" id="stats-badge"><span id="game-count">0</span> games</div>
+    </div>
+  </header>
+
+  <div class="system-tabs" id="system-tabs">
+    <button class="sys-tab active" data-system="all">
+      <div class="dot" style="background:#7c3aed"></div>
+      All Systems
+      <span class="count-pill" id="count-all">0</span>
+    </button>
+  </div>
+
+  <div class="games-container">
+    <div class="section-label" id="section-label">YOUR LIBRARY</div>
+    <div class="games-grid" id="games-grid"></div>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="empty-icon">📦</div>
+      <div class="empty-title">No games found</div>
+      <div class="empty-desc">Add your ROM files to the roms folder on your server to get started.</div>
+      <div class="empty-path">server/roms/gba/ → .gba files</div>
+      <div class="empty-path">server/roms/nds/ → .nds files</div>
+      <div class="empty-path">server/roms/gbc/ → .gbc files</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GAME VIEW ═══ -->
+<div id="game-view">
+  <div class="game-topbar">
+    <button class="back-btn" id="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Library
+    </button>
+    <div class="game-title-bar" id="playing-title">—</div>
+    <span class="game-sys-badge" id="playing-badge">—</span>
+    <div class="topbar-actions">
+      <button class="topbar-btn fullscreen-btn" id="fullscreen-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+        Fullscreen
+      </button>
+      <button class="topbar-btn" id="save-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
+        </svg>
+        Save
+      </button>
+      <button class="topbar-btn danger" id="reset-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <div class="emu-wrapper">
+    <div id="game-container">
+      <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-title" id="loading-title">Loading…</div>
+        <div class="loading-sub" id="loading-sub">Preparing emulator</div>
+      </div>
+    </div>
+
+    <!-- Virtual controls (touch only) -->
+    <div id="virtual-controls">
+      <div class="shoulder-row" id="shoulder-row">
+        <button class="shoulder-btn" data-key="l">L</button>
+        <button class="shoulder-btn" data-key="r">R</button>
+      </div>
+      <div class="vpad-layout">
+        <div class="dpad" id="dpad">
+          <div class="dpad-btn dpad-up"    data-key="up">▲</div>
+          <div class="dpad-btn dpad-left"  data-key="left">◀</div>
+          <div class="dpad-center"></div>
+          <div class="dpad-btn dpad-right" data-key="right">▶</div>
+          <div class="dpad-btn dpad-down"  data-key="down">▼</div>
+        </div>
+        <div class="center-btns">
+          <button class="meta-btn" data-key="select">SELECT</button>
+          <button class="meta-btn" data-key="start">START</button>
+        </div>
+        <div class="abxy-pad" id="abxy-pad">
+          <button class="action-btn btn-x" data-key="x">X</button>
+          <button class="action-btn btn-y" data-key="y">Y</button>
+          <button class="action-btn btn-a" data-key="a">A</button>
+          <button class="action-btn btn-b" data-key="b">B</button>
+        </div>
+      </div>
+      <div class="nds-touch-hint" id="nds-hint" style="display:none">
+        Tap & drag on screen for DS touchscreen
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EmulatorJS -->
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let allGames = [];
+let currentFilter = 'all';
+let currentGame = null;
+let emuInstance = null;
+let isTouchDevice = false;
+let hasController = false;
+
+const SYSTEM_COLORS = {
+  gba:'#9333ea', gbc:'#06b6d4', gb:'#6b7280',
+  nds:'#ef4444', snes:'#f59e0b', n64:'#10b981', psx:'#3b82f6'
+};
+const SYSTEM_EMOJIS = {
+  gba:'🟣', gbc:'🔵', gb:'⚫', nds:'🔴', snes:'🟡', n64:'🟢', psx:'🔵'
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  detectInputType();
+  setupControllerDetection();
+  setupSearch();
+  setupBackButton();
+  setupTopbarActions();
+  setupVirtualControls();
+  await loadGames();
+});
+
+// ─── DEVICE DETECTION ─────────────────────────────────────────────────────────
+function detectInputType() {
+  isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+}
+
+function setupControllerDetection() {
+  window.addEventListener('gamepadconnected', e => {
+    hasController = true;
+    document.getElementById('controller-badge').classList.add('visible');
+    console.log('🎮 Controller connected:', e.gamepad.id);
+  });
+  window.addEventListener('gamepaddisconnected', () => {
+    const gamepads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+    if (gamepads.length === 0) {
+      hasController = false;
+      document.getElementById('controller-badge').classList.remove('visible');
+    }
+  });
+  // Check for already-connected controllers
+  if (navigator.getGamepads) {
+    const pads = [...navigator.getGamepads()].filter(Boolean);
+    if (pads.length > 0) {
+      hasController = true;
+      document.getElementById('controller-badge').classList.add('visible');
+    }
+  }
+}
+
+// ─── GAMES LOADING ─────────────────────────────────────────────────────────
+async function loadGames() {
+  try {
+    const res = await fetch('/api/games');
+    const data = await res.json();
+    allGames = data.games || [];
+    buildSystemTabs(allGames);
+    renderGames(allGames);
+    document.getElementById('game-count').textContent = allGames.length;
+    document.getElementById('count-all').textContent = allGames.length;
+  } catch (err) {
+    console.error('Failed to load games:', err);
+    showEmpty('Could not connect to server. Make sure the server is running.');
+  }
+}
+
+function buildSystemTabs(games) {
+  const tabsEl = document.getElementById('system-tabs');
+  // Count by system
+  const counts = {};
+  games.forEach(g => { counts[g.system] = (counts[g.system] || 0) + 1; });
+
+  Object.entries(counts).forEach(([sys, count]) => {
+    const color = SYSTEM_COLORS[sys] || '#888';
+    const btn = document.createElement('button');
+    btn.className = 'sys-tab';
+    btn.dataset.system = sys;
+    btn.innerHTML = `
+      <div class="dot" style="background:${color}"></div>
+      ${getSysName(sys)}
+      <span class="count-pill">${count}</span>
+    `;
+    btn.addEventListener('click', () => filterBySystem(sys));
+    tabsEl.appendChild(btn);
+  });
+
+  // Tab click handlers
+  tabsEl.querySelectorAll('.sys-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabsEl.querySelectorAll('.sys-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      filterBySystem(tab.dataset.system);
+    });
+  });
+}
+
+function getSysName(sys) {
+  const names = {
+    gba:'GBA', gbc:'GBC', gb:'GB', nds:'NDS',
+    snes:'SNES', n64:'N64', psx:'PS1'
+  };
+  return names[sys] || sys.toUpperCase();
+}
+
+function filterBySystem(system) {
+  currentFilter = system;
+  const query = document.getElementById('search-input').value;
+  applyFilters(query, system);
+}
+
+function setupSearch() {
+  const input = document.getElementById('search-input');
+  input.addEventListener('input', () => applyFilters(input.value, currentFilter));
+}
+
+function applyFilters(query, system) {
+  let filtered = allGames;
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = filtered.filter(g => g.name.toLowerCase().includes(q) || g.systemName.toLowerCase().includes(q));
+  }
+  if (system && system !== 'all') {
+    filtered = filtered.filter(g => g.system === system);
+  }
+  const label = query
+    ? `SEARCH: "${query.toUpperCase()}" — ${filtered.length} results`
+    : system !== 'all'
+    ? `${getSysName(system)} LIBRARY — ${filtered.length} games`
+    : `YOUR LIBRARY — ${filtered.length} games`;
+  document.getElementById('section-label').textContent = label;
+  renderGames(filtered);
+}
+
+function renderGames(games) {
+  const grid = document.getElementById('games-grid');
+  const empty = document.getElementById('empty-state');
+  grid.innerHTML = '';
+
+  if (games.length === 0) {
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  games.forEach(game => {
+    const color = SYSTEM_COLORS[game.system] || '#888';
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.style.setProperty('--sys-color', color);
+    const coverHtml = game.coverPath
+      ? `<img class="card-art-cover" src="${escHtml(game.coverPath)}" alt="${escHtml(game.name)} cover" loading="lazy" onerror="this.remove()">`
+      : `<div class="card-art-placeholder">${SYSTEM_EMOJIS[game.system] || '🎮'}</div>`;
+    card.innerHTML = `
+      <div class="card-art">
+        <div class="card-art-bg"></div>
+        <div class="card-art-icon">${getSysName(game.system)}</div>
+        <div class="card-art-label">${getSysName(game.system)}</div>
+        ${coverHtml}
+        <div class="play-overlay">
+          <div class="play-btn-big">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
+              <path d="M5 3l14 9-14 9V3z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-name">${escHtml(game.name)}</div>
+        <div class="card-sys">${escHtml(game.systemName)}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => launchGame(game));
+    grid.appendChild(card);
+  });
+}
+
+function showEmpty(msg) {
+  document.getElementById('empty-state').style.display = 'flex';
+  document.querySelector('.empty-desc').textContent = msg || '';
+}
+
+// ─── GAME LAUNCH ──────────────────────────────────────────────────────────────
+function launchGame(game) {
+  currentGame = game;
+
+  // Switch views
+  document.getElementById('library-view').style.display = 'none';
+  const gv = document.getElementById('game-view');
+  gv.style.display = 'flex';
+  gv.classList.add('active');
+
+  // Update topbar
+  document.getElementById('playing-title').textContent = game.name;
+  const badge = document.getElementById('playing-badge');
+  badge.textContent = getSysName(game.system);
+  badge.style.background = (SYSTEM_COLORS[game.system] || '#888') + '22';
+  badge.style.color = SYSTEM_COLORS[game.system] || '#888';
+  badge.style.border = `1px solid ${(SYSTEM_COLORS[game.system] || '#888')}44`;
+
+  // Show loading
+  const ls = document.getElementById('loading-screen');
+  ls.classList.add('visible');
+  document.getElementById('loading-title').textContent = `Loading ${game.name}`;
+  document.getElementById('loading-sub').textContent = `${game.systemName} • ${game.core}`;
+
+  // Setup virtual controls based on device + system
+  setupControlsForGame(game);
+
+  // Launch emulator
+  setTimeout(() => startEmulator(game), 300);
+}
+
+function setupControlsForGame(game) {
+  const vc = document.getElementById('virtual-controls');
+  const ndsHint = document.getElementById('nds-hint');
+  const shoulderRow = document.getElementById('shoulder-row');
+  const abxyPad = document.getElementById('abxy-pad');
+
+  // Show touch controls only for touch users without a physical controller
+  const showTouch = isTouchDevice && !hasController;
+  vc.classList.toggle('touch-visible', showTouch);
+
+  if (showTouch) {
+    // NDS specific adjustments
+    ndsHint.style.display = game.system === 'nds' ? 'block' : 'none';
+
+    // Show/hide shoulder buttons (GB/GBC don't have them the same way)
+    shoulderRow.style.display = ['gb', 'gbc'].includes(game.system) ? 'none' : 'flex';
+
+    // GBA has no X/Y buttons on the actual console but mapped for extras
+    // All others standard
+  }
+}
+
+// ─── EMULATOR STARTUP ─────────────────────────────────────────────────────────
+function startEmulator(game) {
+  const container = document.getElementById('game-container');
+
+  // Remove any previous emulator
+  if (emuInstance && typeof EJS_terminate === 'function') {
+    try { EJS_terminate(); } catch(e){}
+  }
+  // Clear container (keep loading screen)
+  const ls = document.getElementById('loading-screen');
+  container.innerHTML = '';
+  container.appendChild(ls);
+
+  // EmulatorJS global config
+  window.EJS_player = '#game-container';
+  window.EJS_gameUrl = game.romPath;
+  window.EJS_core = game.core;
+  window.EJS_pathtodata = 'https://cdn.emulatorjs.org/latest/data/';
+  window.EJS_startOnLoaded = true;
+  window.EJS_color = SYSTEM_COLORS[game.system] || '#7c3aed';
+  window.EJS_backgroundColor = '#000000';
+  window.EJS_defaultOptions = {};
+
+  // Controls config - EmulatorJS handles keyboard automatically
+  // Virtual controls send keypresses via EJS_GameManager if available
+  window.EJS_onGameStart = () => {
+    document.getElementById('loading-screen').classList.remove('visible');
+    emuInstance = window.EJS_emulator;
+  };
+  window.EJS_onLoadState = () => {};
+  window.EJS_onSaveState = () => {};
+
+  // NDS dual screen
+  if (game.system === 'nds') {
+    window.EJS_defaultOptions['dual-screen'] = '1';
+  }
+
+  // Load EmulatorJS script
+  const script = document.createElement('script');
+  script.src = 'https://cdn.emulatorjs.org/latest/data/loader.js';
+  script.onload = () => {
+    setTimeout(() => {
+      document.getElementById('loading-screen').classList.remove('visible');
+    }, 8000); // fallback hide
+  };
+  script.onerror = () => {
+    document.getElementById('loading-screen').classList.remove('visible');
+    showGameError('Failed to load emulator. Check your internet connection.');
+  };
+  document.head.appendChild(script);
+}
+
+function showGameError(msg) {
+  const container = document.getElementById('game-container');
+  container.innerHTML = `
+    <div style="text-align:center;color:var(--text2);padding:40px;font-family:var(--font)">
+      <div style="font-size:40px;margin-bottom:16px">⚠️</div>
+      <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px">Error</div>
+      <div style="font-size:14px">${msg}</div>
+    </div>
+  `;
+}
+
+// ─── TOPBAR ACTIONS ───────────────────────────────────────────────────────────
+function setupBackButton() {
+  document.getElementById('back-btn').addEventListener('click', () => {
+    // Stop emulator
+    if (window.EJS_emulator) {
+      try { window.EJS_emulator.pause(); } catch(e) {}
+    }
+    // Clean up script tags
+    document.querySelectorAll('script[src*="emulatorjs"]').forEach(s => s.remove());
+
+    document.getElementById('game-view').style.display = 'none';
+    document.getElementById('game-view').classList.remove('active');
+    document.getElementById('library-view').style.display = 'flex';
+    document.getElementById('game-container').innerHTML = '';
+    document.getElementById('game-container').appendChild(document.getElementById('loading-screen'));
+    currentGame = null;
+    emuInstance = null;
+
+    // Re-setup controls visibility
+    document.getElementById('virtual-controls').classList.remove('touch-visible');
+  });
+}
+
+function setupTopbarActions() {
+  document.getElementById('fullscreen-btn').addEventListener('click', () => {
+    const el = document.getElementById('game-view');
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+    } else {
+      document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+    }
+  });
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    if (window.EJS_emulator) {
+      try { window.EJS_emulator.saveState(); showToast('State saved ✓'); } catch(e) { showToast('Save failed'); }
+    }
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (window.EJS_emulator) {
+      try { window.EJS_emulator.restart(); showToast('Game reset'); } catch(e) {}
+    }
+  });
+}
+
+// ─── VIRTUAL CONTROLS ─────────────────────────────────────────────────────────
+// Key mappings for EmulatorJS default bindings
+const KEY_MAP = {
+  up:     'ArrowUp',
+  down:   'ArrowDown',
+  left:   'ArrowLeft',
+  right:  'ArrowRight',
+  a:      'x',
+  b:      'z',
+  x:      's',
+  y:      'a',
+  l:      'q',
+  r:      'e',
+  start:  'Enter',
+  select: 'Shift',
+};
+
+function setupVirtualControls() {
+  document.querySelectorAll('[data-key]').forEach(btn => {
+    const key = btn.dataset.key;
+    const code = KEY_MAP[key];
+    if (!code) return;
+
+    const fireDown = (e) => {
+      e.preventDefault();
+      btn.classList.add('pressed');
+      window.dispatchEvent(new KeyboardEvent('keydown', {
+        key: code, code: code, bubbles: true, cancelable: true
+      }));
+    };
+    const fireUp = (e) => {
+      e.preventDefault();
+      btn.classList.remove('pressed');
+      window.dispatchEvent(new KeyboardEvent('keyup', {
+        key: code, code: code, bubbles: true, cancelable: true
+      }));
+    };
+
+    btn.addEventListener('touchstart', fireDown, { passive: false });
+    btn.addEventListener('touchend', fireUp, { passive: false });
+    btn.addEventListener('touchcancel', fireUp, { passive: false });
+    // Also support mouse for desktop testing
+    btn.addEventListener('mousedown', fireDown);
+    btn.addEventListener('mouseup', fireUp);
+    btn.addEventListener('mouseleave', fireUp);
+  });
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+    background:var(--bg4);border:1px solid var(--border2);border-radius:8px;
+    padding:8px 16px;font-size:13px;color:var(--text);z-index:9999;
+    font-family:var(--font);pointer-events:none;
+    animation:toast-in .2s ease;
+  `;
+  t.textContent = msg;
+  const style = document.createElement('style');
+  style.textContent = '@keyframes toast-in{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+  document.head.appendChild(style);
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
